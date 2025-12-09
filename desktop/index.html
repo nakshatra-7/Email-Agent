@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Email Agent Dashboard</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 16px; }
+      h1 { font-size: 18px; margin-bottom: 8px; }
+      button { margin: 4px 0; }
+      .section { margin-top: 12px; }
+      textarea { width: 100%; height: 200px; }
+    </style>
+  </head>
+  <body>
+    <h1>Email Agent</h1>
+    <div class="section">
+      <button id="sync">Sync Now</button>
+      <button id="openDocs">Open API Docs</button>
+    </div>
+    <div class="section" id="eventsContainer"></div>
+    <script>
+      const API_BASE = `http://127.0.0.1:${window.API_PORT || 8001}/api`;
+      const urgencyColors = { high: "#f87171", critical: "#f87171", medium: "#fbbf24", low: "#34d399" };
+
+      function buildDraft(evt) {
+        const urgency = evt.urgency || "medium";
+        const needsReply = evt.needs_reply;
+        const summary = evt.summary || "";
+        const hasAutoDraft = evt.intent_actions && evt.intent_actions.includes("AUTO_DRAFT_REPLY");
+        const hasSuggestDraft = evt.intent_actions && evt.intent_actions.includes("SUGGEST_REPLY_DRAFT");
+        const shouldDraft =
+          hasAutoDraft ||
+          (needsReply && (urgency === "high" || urgency === "critical")) ||
+          (urgency === "critical");
+        if (!shouldDraft) return "";
+        const polite = hasSuggestDraft && !hasAutoDraft;
+        return polite
+          ? `Suggested reply based on the email:\n\n${summary}\n\nFeel free to edit and send.`
+          : `Hi,\n\nThanks for reaching out. I saw your message and will address this as soon as possible.\n\nSummary: ${summary}\n\nBest,\nYour Email Agent`;
+      }
+
+      function renderEvents(events) {
+        const container = document.getElementById("eventsContainer");
+        if (!events || !events.length) {
+          container.innerHTML = "<p>No processed emails yet.</p>";
+          return;
+        }
+        container.innerHTML = events
+          .map((evt) => {
+            const urgency = evt.urgency || "unknown";
+            const color = urgencyColors[urgency] || "#9ca3af";
+            const meeting = evt.contains_meeting ? evt.meeting_details : null;
+            const draft = buildDraft(evt);
+            return `
+              <div style="border: 2px solid ${color}; padding: 10px; border-radius: 8px; margin-bottom: 10px;">
+                <div style="display:flex; justify-content:space-between;">
+                  <strong>${evt.subject || "(no subject)"}</strong>
+                  <span style="background:${color}; color:#111; padding:2px 6px; border-radius:4px;">${urgency}</span>
+                </div>
+                <div style="font-size:12px; color:#555;">From: ${evt.from || "unknown"}</div>
+                <div style="margin-top:6px;"><strong>Summary:</strong> ${evt.summary || "N/A"}</div>
+                ${meeting ? `<div style="margin-top:6px;"><strong>Meeting:</strong> ${meeting.title || "Untitled"} — ${meeting.date || ""} ${meeting.start_time || ""} ${meeting.timezone || ""}</div>` : ""}
+                ${evt.has_attachments ? `<div style="margin-top:6px; font-size:12px; color:#555;">Attachments: ${evt.attachments_count}</div>` : ""}
+                ${evt.attachment_excerpt ? `<div style="margin-top:6px; font-size:12px; color:#444;"><strong>Attachment summary:</strong><br>${evt.attachment_excerpt}</div>` : ""}
+                ${draft ? `<div style="margin-top:8px; white-space:pre-wrap; border-top:1px solid #eee; padding-top:6px;"><strong>Prepared reply:</strong>\n${draft}</div>` : ""}
+              </div>
+            `;
+          })
+          .join("");
+      }
+
+      document.getElementById("sync").onclick = async () => {
+        await fetch(`${API_BASE}/agent/sync_once`, { method: "POST" });
+        loadEvents();
+      };
+      document.getElementById("openDocs").onclick = () => {
+        require("electron").shell.openExternal(`http://127.0.0.1:${window.API_PORT || 8001}/docs`);
+      };
+      async function loadEvents() {
+        try {
+          const res = await fetch(`${API_BASE}/agent/events?limit=10`);
+          const data = await res.json();
+          renderEvents(data);
+        } catch (e) {
+          document.getElementById("eventsContainer").innerHTML = "<p>Failed to load events</p>";
+        }
+      }
+      loadEvents();
+      setInterval(loadEvents, 30000);
+    </script>
+  </body>
+</html>
