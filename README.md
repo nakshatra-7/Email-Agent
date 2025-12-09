@@ -44,7 +44,7 @@ source .venv/bin/activate
 python -m app.gmail_auth  # browser opens, sign in; token saved to data/token.json
 ```
 
-### Env vars
+### Environment Variables
 ```bash
 export GEMINI_API_KEY="your-gemini-key"
 # optional overrides
