@@ -1,4 +1,4 @@
-# Email Agent
+# Email Agent- Agentic AI Email Assistant
 
 FastAPI + Gmail + Gemini–powered agent that:
 - Syncs Gmail inbox (read, attachments, send).
