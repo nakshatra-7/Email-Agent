@@ -16,7 +16,7 @@ FastAPI + Gmail + Gemini–powered agent that:
 - Attachments: PDFs are downloaded, text-extracted, and appended to the analysis context; an excerpt is shown in the dashboard.
 - Desktop app: Electron wrapper that starts/stops backend + agent, shows notifications, and a dashboard with urgency colors, summaries, meetings, attachment info, and prepared replies.
 
-## Architectureg
+## Architecture
 - **Backend:** FastAPI, SQLModel/SQLite, Gmail API client, Gemini client.
 - **LLM:** Google Gemini (`google-generativeai`), configurable model via `GEMINI_MODEL_NAME`.
 - **Scheduler:** Python loop (`app/services/agent_runner.py`) polling Gmail and running analysis/actions.
